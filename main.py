@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import seaborn as sb
 import pandas as pd
 
 # Primeiro ponto: definição das variáveis com base no dicionário do dataset - https://archive.ics.uci.edu/dataset/45/heart+disease
@@ -56,3 +58,26 @@ if len(text_cols) > 0:
 
 else: 
     print("Não foram encontrados textos ou tipos diferentes nas colunas numéricas")
+
+# describe() -> contagem, média, desvio padrão, mínimo, quartis e máximo.
+# ignora cols de texto (por padrão).
+
+statistics = df.describe()
+
+# as Rows viram os params e as cols viram os valores de média, std deviation, min, max & etc.
+print(statistics.T)
+
+# Aqui vamos começar a destrinchar os dados em gráficos, com o objetivo e verificar o balanceamento dos dados.
+
+sb.set_theme(style="whitegrid")
+plt.figure(figsize=(6,4))
+
+sb.countplot(data=df, x='num_target', palette=['#1f77b4', '#d62728'])
+
+plt.title("Class distribution - cardiac disease")
+plt.xlabel("Diagnosis: (0 = Without Cardiac Disease, 1 = With Cardiac Disease)")
+plt.ylabel("Number of patients")
+
+file_name = 'target_distribution.png'
+plt.savefig(file_name, dpi=600, bbox_inches='tight')
+plt.close()
