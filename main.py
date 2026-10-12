@@ -5,21 +5,21 @@ import pandas as pd
 # Primeiro ponto: definição das variáveis com base no dicionário do dataset - https://archive.ics.uci.edu/dataset/45/heart+disease
 # na etapa IDA, é preciso verificar os tipos de cara variável, esse método faz parte da proposta da Exp. DA.
 cols = [
-    "age",
-    "sex",
-    "cp",
-    "tresbps",
-    "chol",
-    "fbs",
-    "restecg",
-    "thalach",
-    "exang",
-    "oldpeak",
-    "slope",
-    "ca",
-    "thal",
-    "num_target",
-    ]
+        "age",
+        "sex",
+        "cp",
+        "trestbps",
+        "chol",
+        "fbs",
+        "restecg",
+        "thalach",
+        "exang",
+        "oldpeak",
+        "slope",
+        "ca",
+        "thal",
+        "num_target",
+        ]
 
 url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
 
@@ -81,3 +81,46 @@ plt.ylabel("Number of patients")
 file_name = 'target_distribution.png'
 plt.savefig(file_name, dpi=600, bbox_inches='tight')
 plt.close()
+
+# Começando a análise da correlação de Pearson
+plt.figure(figsize=(12,8))
+
+correlation_matrix = df.corr(numeric_only=True) # ignora os casos onde o casting do pandas pra object acontecem (ca e thal)
+
+sb.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap="coolwarm", vmin=-1, vmax=1) # O heatmap é um ótimo tipo de gráfico para demonstrar a itensidade da correlação entre duas variáveis ([-1, 1]
+plt.title("Correlação de Pearson (Heatmap)")
+
+file_name_correlation = "mapa_correlacao.png"
+plt.savefig(file_name_correlation, dpi=600, bbox_inches='tight')
+plt.close()
+
+## Histograma (tratando variáveis contínuas como discretas em faixas (bins)) da idade x variável alvo (ausência/presença da doença cardíaca)
+plt.figure(figsize=(8,5))
+sb.histplot(data=df, x='age', hue='num_target', kde=True, palette=['#1f77b4','#d62728'])
+plt.title("Distribuição da Idade por Diagnóstico")
+plt.xlabel("Idade (Anos)")
+plt.ylabel("Frequência")
+
+file_name_histogram = "histograma_idade_frequência.png"
+plt.savefig(file_name_histogram, dpi=600, bbox_inches='tight')
+plt.close()
+
+## Box Plots para percentis (verificação de outliers, e validação dos mesmos), serão dois (colesterol e pressão arterial)
+
+fig, axis = plt.subplots(1,2, figsize=(12,5))
+
+sb.boxplot(data=df, x='num_target', y='trestbps', ax=axis[0], palette=['#1f77b4', '#d62728'])
+axis[0].set_title('Pressão arterial em repouso (trestbps) vs Alvo (presença de doença cardíaca)')
+axis[0].set_xlabel('Alvo: 0 - Sem doença | 1 - Com doença')
+axis[0].set_ylabel('Pressão Arterial (mmHg)')
+
+sb.boxplot(data=df, x='num_target', y='chol', ax=axis[1], palette=['#1f77b4','#d62728'])
+axis[1].set_title('Colesterol vs Alvo')
+axis[1].set_xlabel('Alvo: 0 - Sem doença | 1 - Com doença')
+axis[1].set_ylabel('Colesterol (mg/dl)')
+
+box_name = 'boxplots_outliers.png'
+plt.savefig(box_name, dpi=600, bbox_inches='tight')
+plt.close()
+
+print("==== FIM DA E.D.A. ====")
