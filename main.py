@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import seaborn as sb
 import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # Primeiro ponto: definição das variáveis com base no dicionário do dataset - https://archive.ics.uci.edu/dataset/45/heart+disease
 # na etapa IDA, é preciso verificar os tipos de cara variável, esse método faz parte da proposta da Exp. DA.
@@ -122,5 +125,39 @@ axis[1].set_ylabel('Colesterol (mg/dl)')
 box_name = 'boxplots_outliers.png'
 plt.savefig(box_name, dpi=600, bbox_inches='tight')
 plt.close()
+## Aqui eu começo o pré-processamento dos dados:
 
-print("==== FIM DA E.D.A. ====")
+df.replace('?', np.nan, inplace=True)
+# dando replace nos '?' por NaN (np.nan) e castando float nelas
+df['ca'] = df['ca'].astype(float)
+df['thal'] = df['thal'].astype(float)
+
+df = df.dropna()
+
+## A partir daqui vamos começar de fato o pré-processamento, o scikit precisa que eu entregue os dados em duas matrizes
+## distintas: a matriz das variáveis independentes e a matriz-coluna da variável alvo (num_target)
+
+## Train-test split approach: conceito simples para evitar overfitting (o modelo "decora" as respostas e não analisa
+## corretamente as correlações biológicas) >> fornecer uma qtd. limitada (e.g. 70%) dos dados para o modelo e guardar
+## o restante para uma prova cega (Teste).
+
+## Feature Scalling >> Conceito bem relevante: algumas variáveis variam em ordens de grandeza muito distintas entre 
+## si (exemplo: Colesterol (centenas) vs nivelamento do segmento ST do eletrocardiograma (oldpeak) que varia em decimais
+## Para isso é importante que ocorra um "nivelamento" (Normalização), aqui vamos usar o modelo Z-escore ( x - media / std )
+
+## Para evitar o overfitting no nivelamento, vamos "treinar" o modelo apenas com os dados de treino (os 70%)
+
+independent_vars = df.drop("num_target", axis=1)
+dependent_var = df["num_target"]
+
+#stratify mantém a proporção de pacientes com/sem doença
+independent_vars_train, independent_vars_test, dependent_var_train, dependent_var_test = train_test_split(independent_vars, dependent_var, test_size=0.3, random_state=42, stratify=dependent_var)
+
+scaler = StandardScaler()
+
+ind_vars_train_scaled = scaler.fit_transform(independent_vars_train)
+ind_vars_test_scaled = scaler.fit_transform(independent_vars_test)
+
+print(f"Dados de treino: {ind_vars_train_scaled.shape[0]} pacientes")
+print(f"Dados de teste: {ind_vars_test_scaled.shape[0]} pacientes")
+
