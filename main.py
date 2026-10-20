@@ -1,6 +1,11 @@
 import matplotlib.pyplot as plt
 import seaborn as sb
 import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # Primeiro ponto: definição das variáveis com base no dicionário do dataset - https://archive.ics.uci.edu/dataset/45/heart+disease
 # na etapa IDA, é preciso verificar os tipos de cara variável, esse método faz parte da proposta da Exp. DA.
@@ -122,5 +127,78 @@ axis[1].set_ylabel('Colesterol (mg/dl)')
 box_name = 'boxplots_outliers.png'
 plt.savefig(box_name, dpi=600, bbox_inches='tight')
 plt.close()
+## Aqui eu começo o pré-processamento dos dados:
 
-print("==== FIM DA E.D.A. ====")
+df.replace('?', np.nan, inplace=True)
+# dando replace nos '?' por NaN (np.nan) e castando float nelas
+df['ca'] = df['ca'].astype(float)
+df['thal'] = df['thal'].astype(float)
+
+df = df.dropna()
+
+## A partir daqui vamos começar de fato o pré-processamento, o scikit precisa que eu entregue os dados em duas matrizes
+## distintas: a matriz das variáveis independentes e a matriz-coluna da variável alvo (num_target)
+
+## Train-test split approach: conceito simples para evitar overfitting (o modelo "decora" as respostas e não analisa
+## corretamente as correlações biológicas) >> fornecer uma qtd. limitada (e.g. 70%) dos dados para o modelo e guardar
+## o restante para uma prova cega (Teste).
+
+## Feature Scalling >> Conceito bem relevante: algumas variáveis variam em ordens de grandeza muito distintas entre 
+## si (exemplo: Colesterol (centenas) vs nivelamento do segmento ST do eletrocardiograma (oldpeak) que varia em decimais
+## Para isso é importante que ocorra um "nivelamento" (Normalização), aqui vamos usar o modelo Z-escore ( x - media / std )
+
+## Para evitar o overfitting no nivelamento, vamos "treinar" o modelo apenas com os dados de treino (os 70%)
+
+independent_vars = df.drop("num_target", axis=1)
+dependent_var = df["num_target"]
+
+#stratify mantém a proporção de pacientes com/sem doença
+independent_vars_train, independent_vars_test, dependent_var_train, dependent_var_test = train_test_split(independent_vars, dependent_var, test_size=0.3, random_state=42, stratify=dependent_var)
+
+scaler = StandardScaler()
+
+ind_vars_train_scaled = scaler.fit_transform(independent_vars_train)
+ind_vars_test_scaled = scaler.fit_transform(independent_vars_test)
+
+print(f"Dados de treino: {ind_vars_train_scaled.shape[0]} pacientes")
+print(f"Dados de teste: {ind_vars_test_scaled.shape[0]} pacientes")
+
+
+# Regressão escolhida: Logística ( classificação binária )
+# A ideia é muito similar à uma regressão linear comum: Multiplica cada variável (x1 ... xn) por um meso (w1 ... wn) e adiciona ao final um fator de correção (viés) >> os pesos w são encontrados na fase do treino.
+
+# Tomamos nosso resultado (z = w1x1 + ... + wnxn + b) e utilizamos ele como input numa função sigmoide (que varia apenas entre 0 e 1, com a finalidade de "forçar" que nosso z obtido (que antes variava de -inf até +inf passe agora à variar apenas entre 0 e 1). Fn sigmóide é dada por: delta(z) = 1/1+e^-z.
+
+## Tomada de decisão: Quando o delta(z) retorna algo >= 0.5 (leia-se acima de 50%...), considera-se que, probabilisticamente, o paciente tende a 1 (COM doença), evidentemente que o oposto resulta em não doente.
+## ps: funções de mapeamento probabilístico // fns de ativação, estudar à parte.
+
+model_lr = LogisticRegression(random_state=42)
+
+model_lr.fit(ind_vars_train_scaled, dependent_var_train)
+
+dependent_var_blind_test = model_lr.predict(ind_vars_test_scaled)
+
+## Aqui vamos para a última etapa: verificar a capacidade de acerto do nosso modelo E, tão importante quanto,
+## determinar sua capacidade de fugir de falsos negativos e, evitar falsos positivos (Recall)
+
+acc = accuracy_score(dependent_var_test, dependent_var_blind_test)
+
+print(f"Acurácia geral obtida: {acc * 100:.2f}%\n")
+print("Relatório geral: \n")
+
+print(classification_report(dependent_var_test, dependent_var_blind_test))
+
+## Matriz de confusão ** estudar a parte:
+
+conf_matrix = confusion_matrix(dependent_var_test, dependent_var_blind_test)
+displayMatrix = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=['Saudável (0)', 'Doente (1)'])
+
+fig, ax = plt.subplots(figsize=(6,4))
+displayMatrix.plot(cmap='Blues', values_format='d', ax=ax)
+plt.title("Matriz de confusão - Reg. Logística")
+plt.grid(False)
+
+file_matrix_name = 'matriz_confusao.png'
+plt.savefig(file_matrix_name, dpi=600, bbox_inches='tight')
+plt.close()
+
