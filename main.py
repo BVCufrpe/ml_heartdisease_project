@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import pandas as pd
 import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -160,4 +162,43 @@ ind_vars_test_scaled = scaler.fit_transform(independent_vars_test)
 
 print(f"Dados de treino: {ind_vars_train_scaled.shape[0]} pacientes")
 print(f"Dados de teste: {ind_vars_test_scaled.shape[0]} pacientes")
+
+
+# Regressão escolhida: Logística ( classificação binária )
+# A ideia é muito similar à uma regressão linear comum: Multiplica cada variável (x1 ... xn) por um meso (w1 ... wn) e adiciona ao final um fator de correção (viés) >> os pesos w são encontrados na fase do treino.
+
+# Tomamos nosso resultado (z = w1x1 + ... + wnxn + b) e utilizamos ele como input numa função sigmoide (que varia apenas entre 0 e 1, com a finalidade de "forçar" que nosso z obtido (que antes variava de -inf até +inf passe agora à variar apenas entre 0 e 1). Fn sigmóide é dada por: delta(z) = 1/1+e^-z.
+
+## Tomada de decisão: Quando o delta(z) retorna algo >= 0.5 (leia-se acima de 50%...), considera-se que, probabilisticamente, o paciente tende a 1 (COM doença), evidentemente que o oposto resulta em não doente.
+## ps: funções de mapeamento probabilístico // fns de ativação, estudar à parte.
+
+model_lr = LogisticRegression(random_state=42)
+
+model_lr.fit(ind_vars_train_scaled, dependent_var_train)
+
+dependent_var_blind_test = model_lr.predict(ind_vars_test_scaled)
+
+## Aqui vamos para a última etapa: verificar a capacidade de acerto do nosso modelo E, tão importante quanto,
+## determinar sua capacidade de fugir de falsos negativos e, evitar falsos positivos (Recall)
+
+acc = accuracy_score(dependent_var_test, dependent_var_blind_test)
+
+print(f"Acurácia geral obtida: {acc * 100:.2f}%\n")
+print("Relatório geral: \n")
+
+print(classification_report(dependent_var_test, dependent_var_blind_test))
+
+## Matriz de confusão ** estudar a parte:
+
+conf_matrix = confusion_matrix(dependent_var_test, dependent_var_blind_test)
+displayMatrix = ConfusionMatrixDisplay(confusion_matrix=conf_matrix, display_labels=['Saudável (0)', 'Doente (1)'])
+
+fig, ax = plt.subplots(figsize=(6,4))
+displayMatrix.plot(cmap='Blues', values_format='d', ax=ax)
+plt.title("Matriz de confusão - Reg. Logística")
+plt.grid(False)
+
+file_matrix_name = 'matriz_confusao.png'
+plt.savefig(file_matrix_name, dpi=600, bbox_inches='tight')
+plt.close()
 
